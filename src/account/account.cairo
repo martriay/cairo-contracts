@@ -1,9 +1,12 @@
+// SPDX-License-Identifier: MIT
+// OpenZeppelin Contracts for Cairo v0.7.0 (account/account.cairo)
+
 use array::ArrayTrait;
 use array::SpanTrait;
 use option::OptionTrait;
 use serde::Serde;
-use starknet::account::Call;
 use starknet::ContractAddress;
+use starknet::account::Call;
 
 const TRANSACTION_VERSION: felt252 = 1;
 
@@ -22,28 +25,45 @@ trait PublicKeyCamelTrait<TState> {
 
 #[starknet::contract]
 mod Account {
-    use array::SpanTrait;
     use array::ArrayTrait;
+    use array::SpanTrait;
     use box::BoxTrait;
     use ecdsa::check_ecdsa_signature;
-    use option::OptionTrait;
-    use starknet::get_tx_info;
-    use starknet::get_caller_address;
-    use starknet::get_contract_address;
-    use zeroable::Zeroable;
 
     use openzeppelin::account::interface;
     use openzeppelin::introspection::interface::ISRC5;
     use openzeppelin::introspection::interface::ISRC5Camel;
     use openzeppelin::introspection::src5::SRC5;
+    use option::OptionTrait;
+    use starknet::get_caller_address;
+    use starknet::get_contract_address;
+    use starknet::get_tx_info;
 
     use super::Call;
     use super::QUERY_VERSION;
     use super::TRANSACTION_VERSION;
+    use zeroable::Zeroable;
 
     #[storage]
     struct Storage {
         public_key: felt252
+    }
+
+    #[event]
+    #[derive(Drop, starknet::Event)]
+    enum Event {
+        OwnerAdded: OwnerAdded,
+        OwnerRemoved: OwnerRemoved,
+    }
+
+    #[derive(Drop, starknet::Event)]
+    struct OwnerAdded {
+        new_owner_guid: felt252
+    }
+
+    #[derive(Drop, starknet::Event)]
+    struct OwnerRemoved {
+        removed_owner_guid: felt252
     }
 
     #[constructor]
@@ -128,7 +148,8 @@ mod Account {
 
         fn set_public_key(ref self: ContractState, new_public_key: felt252) {
             assert_only_self();
-            self.public_key.write(new_public_key);
+            self.emit(OwnerRemoved { removed_owner_guid: self.public_key.read() });
+            self._set_public_key(new_public_key);
         }
     }
 
@@ -139,8 +160,7 @@ mod Account {
         }
 
         fn setPublicKey(ref self: ContractState, newPublicKey: felt252) {
-            assert_only_self();
-            self.public_key.write(newPublicKey);
+            PublicKeyImpl::set_public_key(ref self, newPublicKey);
         }
     }
 
@@ -163,7 +183,7 @@ mod Account {
         fn initializer(ref self: ContractState, _public_key: felt252) {
             let mut unsafe_state = SRC5::unsafe_new_contract_state();
             SRC5::InternalImpl::register_interface(ref unsafe_state, interface::ISRC6_ID);
-            self.public_key.write(_public_key);
+            self._set_public_key(_public_key);
         }
 
         fn validate_transaction(self: @ContractState) -> felt252 {
@@ -172,6 +192,11 @@ mod Account {
             let signature = tx_info.signature;
             assert(self._is_valid_signature(tx_hash, signature), 'Account: invalid signature');
             starknet::VALIDATED
+        }
+
+        fn _set_public_key(ref self: ContractState, new_public_key: felt252) {
+            self.public_key.write(new_public_key);
+            self.emit(OwnerAdded { new_owner_guid: new_public_key });
         }
 
         fn _is_valid_signature(
