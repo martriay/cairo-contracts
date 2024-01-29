@@ -2,7 +2,7 @@
 
 OpenZeppelin Contracts uses semantic versioning to communicate backwards compatibility of its API and storage layout. Patch and minor updates will generally be backwards compatible, with rare exceptions as detailed below. Major updates should be assumed incompatible with previous releases. On this page, we provide details about these guarantees.
 
-Bear in mind that while releasing versions under `v1.0.0`, we treat minors as majors and patches as minors, in accordance with semantic versioning. This means that `v0.7.1` could be adding features to `v0.7.0`, while `v0.8.0` would be considered a breaking release.
+Bear in mind that while releasing versions under `v1.0.0`, we treat minors as majors and patches as minors, in accordance with semantic versioning. This means that `v0.7.1` could be adding features to `v0.7.0`, while `v1.0.3-rc.10` would be considered a breaking release.
 
 == API
 
